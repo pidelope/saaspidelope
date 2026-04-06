@@ -1,0 +1,70 @@
+{% extends 'dashboard/base_dash.html' %}
+
+{% block dash_content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div>
+        <h1>Mesas y Códigos QR</h1>
+        <p style="color: var(--text-muted);">Administra las mesas y genera sus QRs.</p>
+    </div>
+    <a href="{% url 'dashboard:generate_all_qr' business.slug %}" class="btn btn-dark" target="_blank">🖨️ Imprimir todos los QRs</a>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px; align-items: start;">
+    <!-- Mesas List -->
+    <div class="card animate-fade">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 0.85rem;">
+                    <th style="padding: 12px;">Identificación Mesa</th>
+                    <th style="padding: 12px;">Estado</th>
+                    <th style="padding: 12px; text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mesa in tables %}
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 12px; font-weight: 700; font-size: 1.1rem;">Mesa {{ mesa.number }}</td>
+                    <td style="padding: 12px;">
+                        {% if mesa.is_active %}
+                            <span style="color: #2e7d32; font-weight: 700; font-size: 0.8rem;">✅ Habilitada</span>
+                        {% else %}
+                            <span style="color: #c62828; font-weight: 700; font-size: 0.8rem;">❌ Inactiva</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px; text-align: right;">
+                        <a href="#" style="color: var(--secondary); text-decoration: none; font-size: 1.1rem; margin-left: 10px;">✏️</a>
+                        <a href="#" style="color: var(--accent); text-decoration: none; font-size: 1.1rem; margin-left: 10px;">🗑️</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" style="padding: 30px; text-align: center; color: var(--text-muted);">No has registrado mesas todavía.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add Mesa Form -->
+    <div class="card" style="border: 2px solid var(--primary); background: #fbf00805;">
+        <h3 style="margin-top: 0;">➕ Registrar Mesa</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Ingresa el nombre o número de la mesa que deseas añadir.</p>
+        <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px;">{{ field.label }}</label>
+                {{ field }}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Crear Mesa</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 40px; background: var(--secondary); color: white; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h3 style="color: white; margin: 0;">📦 Pedido Para Llevar (Takeaway)</h3>
+        <p style="opacity: 0.8; margin: 5px 0 0 0;">Genera un ticket QR que solicita el nombre del cliente para entregar el pedido.</p>
+    </div>
+    <a href="#" class="btn btn-primary">Generar QR Llevar</a>
+</div>
+{% endblock %}

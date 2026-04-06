@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PideYa | Sistema de Pedidos Real-time{% endblock %}</title>
+    
+    <!-- SEO -->
+    <meta name="description" content="PideYa es la solución perfecta para cevicherías y menús de alto flujo. Escanea, pide y disfruta.">
+    <meta name="author" content="PideYa Team">
+    
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styling -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    
+    <!-- AlpineJS -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    {% block head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    
+    <!-- Navigation -->
+    <header>
+        <div class="container nav-content">
+            <a href="/" class="logo">
+                <span>Pide</span>Ya
+            </a>
+            
+            <nav>
+                <ul style="list-style: none; display: flex; gap: 20px; align-items: center; padding: 0;">
+                    {% if user.is_authenticated %}
+                        <li><a href="/dashboard/" class="btn btn-dark">Dashboard</a></li>
+                        <li><a href="/admin/" style="color: var(--text-muted); text-decoration: none;">Admin</a></li>
+                        <li>
+                             <form action="{% url 'account_logout' %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" style="background: none; border: none; color: var(--accent); cursor: pointer; font-weight: 600;">Cerrar Sesión</button>
+                             </form>
+                        </li>
+                    {% else %}
+                        <li><a href="/accounts/login/" style="color: var(--secondary); text-decoration: none; font-weight: 600;">Entrar</a></li>
+                        <li><a href="/accounts/signup/" class="btn btn-primary">Registrar mi Negocio</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="animate-fade">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Global Spinner -->
+    <div id="loading" class="htmx-indicator" style="position: fixed; bottom: 20px; right: 20px; background: var(--secondary); color: white; padding: 10px 20px; border-radius: 50px; display: flex; align-items: center; gap: 10px; z-index: 1000;">
+        <span class="spinner"></span> Procesando...
+    </div>
+
+    <style>
+        .spinner {
+            width: 15px;
+            height: 15px;
+            border: 2px solid #fff;
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

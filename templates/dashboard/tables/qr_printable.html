@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Imprimir QRs - {{ business.name }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; margin: 0; padding: 20px; background-color: #f1f1f1; }
+        .page { background: white; width: 210mm; min-height: 297mm; padding: 20mm; margin: 20px auto; box-sizing: border-box; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .qr-card { border: 2px solid #333; border-radius: 12px; padding: 30px; text-align: center; height: fit-content; break-inside: avoid; }
+        .qr-container { display: flex; justify-content: center; margin: 20px 0; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: #1a1a1a; margin-bottom: 5px; }
+        .logo span { background: #fbf008; padding: 2px 8px; border-radius: 4px; }
+        .slogan { font-size: 0.8rem; color: #666; margin-bottom: 25px; }
+        .mesa-num { font-size: 2rem; font-weight: 900; color: #1a1a1a; margin-top: 15px; }
+        .instr { font-size: 0.9rem; font-weight: 600; color: #444; margin-top: 10px; }
+        .footer { font-size: 0.7rem; color: #aaa; margin-top: 20px; text-transform: uppercase; border-top: 1px solid #eee; padding-top: 10px; }
+        
+        @media print {
+            body { background: white; padding: 0; }
+            .page { margin: 0; box-shadow: none; width: 100%; height: 100%; }
+            .btn-print { display: none; }
+        }
+
+        .btn-print { position: fixed; bottom: 30px; right: 30px; background: #fbf008; color: #1a1a1a; padding: 15px 30px; border: none; border-radius: 50px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir Página</button>
+
+    <div class="page">
+        {% for mesa in business.tables.all %}
+        <div class="qr-card">
+            <div class="logo"><span>{{ business.name }}</span></div>
+            <div class="slogan">{{ business.slogan }}</div>
+            <div class="instr">ESCANEAME PARA PEDIR</div>
+            
+            <div class="qr-container">
+                <div id="qrcode-{{ forloop.counter }}"></div>
+            </div>
+            
+            <div class="mesa-num">Mesa {{ mesa.number }}</div>
+            <div class="footer">PideYa. Escanea y disfruta.</div>
+
+            <script>
+                new QRCode(document.getElementById("qrcode-{{ forloop.counter }}"), {
+                    text: "{{ request.scheme }}://{{ request.get_host }}/p/{{ business.slug }}/{{ mesa.number }}/",
+                    width: 180,
+                    height: 180,
+                    colorDark : "#1a1a1a",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            </script>
+        </div>
+        {% endfor %}
+
+        <!-- QR Para Llevar -->
+        <div class="qr-card" style="background: #1a1a1a; color: white; border-color: #fbf008;">
+            <div class="logo" style="color: white;"><span>{{ business.name }}</span></div>
+            <div class="slogan" style="color: #ccc;">{{ business.slogan }}</div>
+            <div class="instr" style="color: #fbf008;">PEDIDO PARA LLEVAR</div>
+            
+            <div class="qr-container">
+                <div id="qrcode-takeaway" style="background: white; padding: 10px; border-radius: 8px;"></div>
+            </div>
+            
+            <div class="mesa-num" style="color: #fbf008;">🥡 LLEVAR</div>
+            <div class="footer" style="color: #555;">PideYa. Solo ingresa tu nombre.</div>
+
+            <script>
+                new QRCode(document.getElementById("qrcode-takeaway"), {
+                    text: "{{ request.scheme }}://{{ request.get_host }}/{{ business.slug }}/llevar/",
+                    width: 180,
+                    height: 180,
+                    colorDark : "#1a1a1a",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            </script>
+        </div>
+    </div>
+
+</body>
+</html>

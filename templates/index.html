@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="hero container">
+    <h1>Transforma tu negocio con <span style="background: var(--primary); padding: 0 10px; border-radius: 8px;">PideYa</span></h1>
+    <p style="font-size: 1.25rem; color: var(--text-muted); max-width: 800px; margin: 0 auto;">
+        Elimina las colas y los errores al anotar pedidos. Permite que tus comensales escaneen un QR y pidan directamente desde su celular.
+    </p>
+    
+    <div style="margin-top: 3rem; display: flex; gap: 20px; justify-content: center;">
+        <a href="/accounts/signup/" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2.5rem;">Registrar hoy mismo</a>
+        <a href="#how-it-works" class="btn btn-dark" style="font-size: 1.1rem; padding: 1rem 2rem;">¿Cómo funciona?</a>
+    </div>
+</section>
+
+<section id="how-it-works" class="container" style="padding: 100px 0;">
+    <h2 style="text-align: center; margin-bottom: 3rem;">El flujo es simple</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px;">
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 3rem;">📱</div>
+            <h3>1. El cliente escanea</h3>
+            <p>Un QR único por mesa abre el menú digital al instante.</p>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 3rem;">⚡</div>
+            <h3>2. Mesero recibe</h3>
+            <p>El pedido aparece en tiempo real en la tablet del mesero.</p>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 3rem;">🧾</div>
+            <h3>3. Cierre fácil</h3>
+            <p>El cajero verifica el pago y tú descargas el reporte diario.</p>
+        </div>
+    </div>
+</section>
+
+<section class="container" style="padding: 100px 0; background-color: var(--secondary); border-radius: 30px; margin-bottom: 50px; color: white;">
+    <div style="text-align: center;">
+        <h2 style="color: white; font-size: 2.5rem;">Comienza tu transformación hoy</h2>
+        <p style="opacity: 0.8; font-size: 1.2rem; margin-bottom: 2.5rem;">No más pedidos perdidos ni clientes insatisfechos.</p>
+        <a href="/accounts/signup/" class="btn btn-primary">Empieza el onboarding →</a>
+    </div>
+</section>
+
+<footer class="container" style="padding: 50px 0; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted);">
+    <p>&copy; 2026 PideYa. Transformando negocios locales.</p>
+</footer>
+{% endblock %}

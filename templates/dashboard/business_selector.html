@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="padding: 100px 0; text-align: center;">
+    <h1 style="margin-bottom: 3rem;">👋 Hola, {{ user.username }}. Gestiona tus negocios</h1>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 50px;">
+        {% for biz in businesses %}
+        <div class="card animate-fade" style="text-align: left; padding: 25px; transition: var(--transition);">
+            <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
+                {% if biz.logo %}
+                    <img src="{{ biz.logo.url }}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🏪</div>
+                {% endif %}
+                <div>
+                    <h3 style="margin: 0; font-size: 1.3rem;">{{ biz.name }}</h3>
+                    <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0;">{{ biz.slug }}</p>
+                </div>
+            </div>
+            <p style="color: var(--text-muted); margin-bottom: 25px;">{{ biz.slogan|truncatechars:80|default:"Tu negocio con PideYa" }}</p>
+            <a href="{% url 'dashboard:business_home' biz.slug %}" class="btn btn-primary" style="width: 100%;">Entrar al Dashboard</a>
+        </div>
+        {% endfor %}
+
+        <!-- Card para agregar local -->
+        <div class="card" style="border: 2px dashed var(--border); background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px;">
+            <div style="font-size: 3rem; color: var(--border); margin-bottom: 20px;">➕</div>
+            <p style="font-weight: 700; color: var(--text-muted);">¿Tienes otro local?</p>
+            <a href="{% url 'dashboard:business_add' %}" class="btn btn-dark" style="margin-top: 15px;">Registrar nueva sede</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

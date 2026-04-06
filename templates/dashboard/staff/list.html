@@ -1,0 +1,56 @@
+{% extends 'dashboard/base_dash.html' %}
+
+{% block dash_content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div>
+        <h1>👥 Gestión de Staff</h1>
+        <p style="color: var(--text-muted);">Administra los meseros y cajeros de <strong>{{ business.name }}</strong>.</p>
+    </div>
+    <a href="{% url 'dashboard:staff_add' business.slug %}" class="btn btn-primary">+ Nuevo Miembro</a>
+</div>
+
+<div class="card">
+    {% if staff %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Nombre</th>
+                    <th>Rol</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in staff %}
+                <tr>
+                    <td><strong>{{ member.username }}</strong></td>
+                    <td>{{ member.first_name }} {{ member.last_name }}</td>
+                    <td>
+                        <span class="badge {% if member.role == 'WAITER' %}badge-blue{% else %}badge-green{% endif %}">
+                            {{ member.get_role_display }}
+                        </span>
+                    </td>
+                    <td>{{ member.phone|default:"-" }}</td>
+                    <td><span class="status-dot active"></span> Activo</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div style="text-align: center; padding: 40px;">
+            <p style="color: #999;">Aún no has registrado personal para este local.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .badge { padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 800; }
+    .badge-blue { background: #e3f2fd; color: #1976d2; }
+    .badge-green { background: #e8f5e9; color: #2e7d32; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+    .status-dot.active { background: #4caf50; }
+</style>
+{% endblock %}

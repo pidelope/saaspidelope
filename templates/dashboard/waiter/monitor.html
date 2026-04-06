@@ -1,0 +1,193 @@
+{% extends 'dashboard/base_dash.html' %}
+
+{% block dash_content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div>
+        <h1>🧑‍🍳 Monitor de Pedidos</h1>
+        <p style="color: var(--text-muted);">Gestiona los pedidos de <strong>{{ business.name }}</strong> en tiempo real.</p>
+    </div>
+    <div style="display: flex; gap: 15px;">
+        <div class="status-badge" style="background: #e3f2fd; color: #1976d2;">📡 Actualizando cada 5s</div>
+    </div>
+</div>
+
+<div class="monitor-grid" hx-get="{% url 'dashboard:waiter_dashboard' business.slug %}" hx-trigger="every 5s" hx-select=".monitor-grid" hx-swap="outerHTML">
+    
+    <!-- Columna: PENDIENTES -->
+    <div class="order-column">
+        <h3 class="column-header" style="border-color: #ff9800;">🆕 Pendientes ({{ pending.count }})</h3>
+        <div class="order-list">
+            {% for order in pending %}
+            <div class="order-card pending">
+                <div class="order-header">
+                    <span class="order-code">#{{ order.code }}</span>
+                    <span class="order-time">{{ order.created_at|timesince }}</span>
+                </div>
+                <div class="order-target">
+                    {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
+                </div>
+                <div class="order-items">
+                    {% for item in order.items.all %}
+                        <div class="item-line">
+                            <span class="qty">{{ item.quantity }}x</span>
+                            <span class="name">{{ item.product.name }}</span>
+                        </div>
+                        {% if item.notes %}
+                            <div class="item-note">📝 {{ item.notes }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="order-actions">
+                    <a href="{% url 'dashboard:update_order_status' business.slug order.code 'CONFIRMED' %}" class="btn-action confirm">Confirmar</a>
+                </div>
+            </div>
+            {% empty %}
+                <p class="empty-msg">No hay pedidos nuevos.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Columna: EN COCINA / CONFIRMADOS -->
+    <div class="order-column">
+        <h3 class="column-header" style="border-color: #2196f3;">🔥 En Cocina ({{ confirmed.count }})</h3>
+        <div class="order-list">
+            {% for order in confirmed %}
+            <div class="order-card confirmed">
+                <div class="order-header">
+                    <span class="order-code">#{{ order.code }}</span>
+                    <span class="order-time">{{ order.created_at|timesince }}</span>
+                </div>
+                <div class="order-target">
+                    {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
+                </div>
+                <div class="order-items">
+                    {% for item in order.items.all %}
+                        <div class="item-line">
+                            <span class="qty">{{ item.quantity }}x</span>
+                            <span class="name">{{ item.product.name }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="order-actions">
+                    <a href="{% url 'dashboard:update_order_status' business.slug order.code 'READY' %}" class="btn-action ready">¡Listo!</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Columna: LISTOS -->
+    <div class="order-column">
+        <h3 class="column-header" style="border-color: #4caf50;">✅ Listos ({{ ready.count }})</h3>
+        <div class="order-list">
+            {% for order in ready %}
+            <div class="order-card ready">
+                <div class="order-header">
+                    <span class="order-code">#{{ order.code }}</span>
+                    <span class="order-time">{{ order.created_at|timesince }}</span>
+                </div>
+                <div class="order-target">
+                    {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
+                </div>
+                <div class="order-actions">
+                    <a href="{% url 'dashboard:update_order_status' business.slug order.code 'PAID' %}" class="btn-action paid" onclick="return confirm('¿El cliente ya pagó y se cerró la cuenta?')">Cerrar Cuenta</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .monitor-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+        align-items: flex-start;
+    }
+
+    .order-column {
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 12px;
+        padding: 15px;
+        min-height: 80vh;
+    }
+
+    .column-header {
+        font-size: 1rem;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .order-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border-left: 5px solid transparent;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateY(10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .order-card.pending { border-left-color: #ff9800; }
+    .order-card.confirmed { border-left-color: #2196f3; }
+    .order-card.ready { border-left-color: #4caf50; }
+
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .order-code { font-weight: 800; font-family: monospace; font-size: 1.1rem; }
+    .order-time { font-size: 0.75rem; color: #999; }
+
+    .order-target {
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 12px;
+        color: #333;
+    }
+
+    .item-line {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 5px;
+        font-size: 0.95rem;
+    }
+    .qty { font-weight: 800; color: #666; }
+    .item-note { font-size: 0.8rem; font-style: italic; color: #ff5722; margin-bottom: 8px; margin-left: 25px; }
+
+    .order-actions {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-action {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 0.85rem;
+        transition: 0.2s;
+    }
+    .btn-action.confirm { background: #fff3e0; color: #e65100; }
+    .btn-action.ready { background: #e3f2fd; color: #1565c0; }
+    .btn-action.paid { background: #e8f5e9; color: #2e7d32; }
+
+    .btn-action:hover { filter: brightness(0.95); transform: scale(1.02); }
+
+    .empty-msg { text-align: center; color: #aaa; margin-top: 40px; font-style: italic; }
+</style>
+{% endblock %}

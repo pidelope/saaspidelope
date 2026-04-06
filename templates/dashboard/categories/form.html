@@ -1,0 +1,52 @@
+{% extends 'dashboard/base_dash.html' %}
+
+{% block dash_content %}
+<div style="max-width: 500px;">
+    <div style="margin-bottom: 30px;">
+        <a href="{% url 'dashboard:category_list' %}" style="text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">← Volver al listado</a>
+        <h1>Añadir Categoría</h1>
+        <p style="color: var(--text-muted);">Define un nombre y opcionalmente el orden de visualización.</p>
+    </div>
+
+    <div class="card animate-fade">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% for field in form %}
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 8px; font-size: 0.9rem;">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                     {% for error in field.errors %}
+                        <div style="color: var(--accent); font-size: 0.8rem; margin-top: 5px;">{{ error }}</div>
+                     {% endfor %}
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div style="margin-top: 40px; display: flex; gap: 15px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar Categoría</button>
+                <a href="{% url 'dashboard:category_list' %}" class="btn btn-dark" style="flex: 1;">Descartar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-input, .form-select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 1rem;
+        transition: var(--transition);
+        box-sizing: border-box;
+    }
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}

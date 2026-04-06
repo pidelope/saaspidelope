@@ -1,0 +1,22 @@
+{% extends 'dashboard/base_dash.html' %}
+
+{% block dash_content %}
+<div style="max-width: 500px; margin: 50px auto; text-align: center;">
+    <div class="card" style="border: 2px solid var(--accent); padding: 40px;">
+        <div style="font-size: 4rem; margin-bottom: 20px;">⚠️</div>
+        <h2>¿Estás seguro?</h2>
+        <p style="color: var(--text-muted); margin-bottom: 30px;">
+            Estás a punto de eliminar el {{ type }}: <strong>"{{ object }}"</strong>. 
+            Esta acción no se puede deshacer.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; gap: 15px;">
+                <button type="submit" class="btn" style="flex: 1; background: var(--accent); color: white;">Sí, Eliminar</button>
+                <a href="javascript:history.back()" class="btn btn-dark" style="flex: 1;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
