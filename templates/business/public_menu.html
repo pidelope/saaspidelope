@@ -80,6 +80,7 @@
     orderSent: false,
     orderCode: '',
     loading: false,
+    customerName: '',
     get total() { return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0).toFixed(2) },
     get count() { return this.cart.reduce((sum, item) => sum + item.qty, 0) },
     addToCart(id, name, price) {
@@ -97,12 +98,17 @@
     async submitOrder() {
         this.loading = true;
         try {
+            if (!{{ table.id|default:"null" }} && !this.customerName.trim()) {
+                alert('Por favor ingresa tu nombre para el pedido.');
+                return;
+            }
             const resp = await fetch('{% url 'orders:submit_order' %}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     business_id: {{ business.id }},
-                    table_id: {{ table.id }},
+                    table_id: {{ table.id|default:"null" }},
+                    customer_name: this.customerName,
                     items: this.cart
                 })
             });
@@ -144,7 +150,11 @@
                 <h1>{{ business.name }}</h1>
                 <p>{{ business.slogan }}</p>
                 <p>📍 {{ business.address }}</p>
-                <p>📦 Mesa #{{ table.number }}</p>
+                {% if table %}
+                    <p>🪑 Mesa #{{ table.number }}</p>
+                {% else %}
+                    <p>🥡 Para Llevar / Takeaway</p>
+                {% endif %}
             </div>
         </header>
 
@@ -184,7 +194,14 @@
     <!-- Modal del Carrito -->
     <div class="modal-backdrop" x-show="showCart" x-cloak x-transition.opacity @click.self="showCart = false">
         <div class="modal-content animate-slide-up">
-            <h3 style="font-weight: 800; margin-top: 0;">Tu Pedido - Mesa {{ table.number }}</h3>
+            <h3 style="font-weight: 800; margin-top: 0;">Tu Pedido - {% if table %}Mesa {{ table.number }}{% else %}Para Llevar{% endif %}</h3>
+            
+            {% if not table %}
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 8px;">Tu nombre:</label>
+                <input type="text" x-model="customerName" placeholder="¿A quién entregamos?" style="width: 100%; padding: 12px; border: 2px solid var(--primary); border-radius: 10px; font-family: inherit;">
+            </div>
+            {% endif %}
             <div style="margin-bottom: 20px;">
                 <template x-for="item in cart" :key="item.id">
                     <div class="cart-item">

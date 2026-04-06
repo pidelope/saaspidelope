@@ -4,8 +4,12 @@ from products.models import Category
 
 def public_menu(request, business_slug, table_number):
     business = get_object_or_404(Business, slug=business_slug)
-    # The table_number is just for tracking who makes the order
-    table = get_object_or_404(Table, business=business, number=table_number)
+    
+    # Handle takeaway case or physical table
+    if table_number.lower() == 'llevar':
+        table = None # Placeholder for takeaway
+    else:
+        table = get_object_or_404(Table, business=business, number=table_number)
     
     # Get categories and products
     categories = Category.objects.filter(business=business).prefetch_related('products')

@@ -13,15 +13,20 @@ def submit_order(request):
             data = json.loads(request.body)
             business_id = data.get('business_id')
             table_id = data.get('table_id')
+            customer_name = data.get('customer_name')
             cart_items = data.get('items', [])
             
             business = get_object_or_404(Business, id=business_id)
-            table = get_object_or_404(Table, id=table_id, business=business)
+            
+            table = None
+            if table_id:
+                table = get_object_or_404(Table, id=table_id, business=business)
             
             # Create Order
             order = Order.objects.create(
                 business=business,
                 table=table,
+                customer_name=customer_name,
                 status='PENDING'
             )
             
