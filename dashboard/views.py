@@ -170,7 +170,14 @@ def product_toggle_stock(request, business_slug, pk):
     product.save()
     label = "✅ Disponible" if product.is_available else "❌ Agotado"
     color = "#2e7d32" if product.is_available else "#c62828"
-    return HttpResponse(f'<span style="color: {color}; font-size: 0.75rem; font-weight: 700; cursor: pointer;">{label}</span>')
+    
+    # Retornamos el mismo elemento con los atributos de HTMX para que siga siendo cliqueable
+    html = f'''
+    <span style="color: {color}; font-size: 0.75rem; font-weight: 700; cursor: pointer;" 
+          hx-post="/dashboard/{business_slug}/products/toggle-stock/{pk}/" 
+          hx-target="#stock-{pk}" hx-swap="innerHTML">{label}</span>
+    '''
+    return HttpResponse(html)
 
 @admin_required
 def product_delete(request, business_slug, pk):

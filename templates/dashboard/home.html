@@ -30,7 +30,7 @@
     <div class="card" style="background: var(--primary); display: flex; flex-direction: column; gap: 8px; border: none;">
         <span style="font-size: 0.9rem; font-weight: 700; color: var(--secondary); opacity: 0.8;">⚡ Órdenes Activas</span>
         <span style="font-size: 2rem; font-weight: 800; color: var(--secondary);">{{ active_orders }}</span>
-        <a href="#" style="font-size: 0.8rem; color: var(--secondary); font-weight: 700;">Ver panel de mesero →</a>
+        <a href="{% url 'dashboard:waiter_dashboard' business.slug %}" style="font-size: 0.8rem; color: var(--secondary); font-weight: 700;">Ver panel de mesero →</a>
     </div>
 </div>
 

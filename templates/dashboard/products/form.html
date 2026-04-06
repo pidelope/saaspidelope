@@ -3,7 +3,7 @@
 {% block dash_content %}
 <div style="max-width: 600px;">
     <div style="margin-bottom: 30px;">
-        <a href="{% url 'dashboard:product_list' %}" style="text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">← Volver al listado</a>
+        <a href="{% url 'dashboard:product_list' business.slug %}" style="text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">← Volver al listado</a>
         <h1>Nuevo Producto</h1>
         <p style="color: var(--text-muted);">Llena los detalles del plato o producto.</p>
     </div>
@@ -26,7 +26,7 @@
 
             <div style="margin-top: 40px; display: flex; gap: 15px;">
                 <button type="submit" class="btn btn-primary" style="flex: 1;">Guardar Producto</button>
-                <a href="{% url 'dashboard:product_list' %}" class="btn btn-dark" style="flex: 1;">Cancelar</a>
+                <a href="{% url 'dashboard:product_list' business.slug %}" class="btn btn-dark" style="flex: 1;">Cancelar</a>
             </div>
         </form>
     </div>

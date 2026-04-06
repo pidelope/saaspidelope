@@ -161,11 +161,6 @@
                 <div class="product-grid">
                     {% for product in cat.products.all %}
                     <div class="product-card">
-                        {% if product.image %}
-                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-img">
-                        {% else %}
-                        <div style="width: 80px; height: 80px; background: #eee; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">🍔</div>
-                        {% endif %}
                         <div class="product-details">
                             <p class="product-name">{{ product.name }}</p>
                             <p class="product-desc">{{ product.description }}</p>

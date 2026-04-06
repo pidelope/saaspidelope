@@ -109,6 +109,10 @@ DATABASES = {
     )
 }
 
+# Forzar SSL para PostgreSQL (Render)
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

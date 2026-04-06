@@ -6,7 +6,10 @@
         <h1>Tu Menú</h1>
         <p style="color: var(--text-muted);">Gestiona platos, precios y disponibilidad.</p>
     </div>
-    <a href="{% url 'dashboard:product_add' %}" class="btn btn-primary">+ Agregar Plato</a>
+    <div style="display: flex; gap: 10px;">
+        <a href="{% url 'dashboard:category_add' business.slug %}" class="btn btn-dark" style="background-color: var(--secondary); color: white;">+ Nueva Categoría</a>
+        <a href="{% url 'dashboard:product_add' business.slug %}" class="btn btn-primary">+ Agregar Plato</a>
+    </div>
 </div>
 
 <div class="card animate-fade">
@@ -36,17 +39,17 @@
                 <td style="padding: 12px;" id="stock-{{ prod.pk }}">
                     {% if prod.is_available %}
                         <span style="color: #2e7d32; font-size: 0.75rem; font-weight: 700; cursor: pointer;" 
-                              hx-post="{% url 'dashboard:product_toggle_stock' prod.pk %}" 
+                              hx-post="{% url 'dashboard:product_toggle_stock' business.slug prod.pk %}" 
                               hx-target="#stock-{{ prod.pk }}" hx-swap="innerHTML">✅ Disponible</span>
                     {% else %}
                         <span style="color: #c62828; font-size: 0.75rem; font-weight: 700; cursor: pointer;" 
-                              hx-post="{% url 'dashboard:product_toggle_stock' prod.pk %}" 
+                              hx-post="{% url 'dashboard:product_toggle_stock' business.slug prod.pk %}" 
                               hx-target="#stock-{{ prod.pk }}" hx-swap="innerHTML">❌ Agotado</span>
                     {% endif %}
                 </td>
                 <td style="padding: 12px; text-align: right;">
-                    <a href="{% url 'dashboard:product_edit' prod.pk %}" style="color: var(--secondary); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Editar">✏️</a>
-                    <a href="{% url 'dashboard:product_delete' prod.pk %}" style="color: var(--accent); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Eliminar">🗑️</a>
+                    <a href="{% url 'dashboard:product_edit' business.slug prod.pk %}" style="color: var(--secondary); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Editar">✏️</a>
+                    <a href="{% url 'dashboard:product_delete' business.slug prod.pk %}" style="color: var(--accent); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Eliminar">🗑️</a>
                 </td>
             </tr>
             {% empty %}

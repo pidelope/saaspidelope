@@ -6,7 +6,7 @@
         <h1>Categorías</h1>
         <p style="color: var(--text-muted);">Gestiona los grupos de tu menú.</p>
     </div>
-    <a href="{% url 'dashboard:category_add' %}" class="btn btn-primary">+ Nueva Categoría</a>
+    <a href="{% url 'dashboard:category_add' business.slug %}" class="btn btn-primary">+ Nueva Categoría</a>
 </div>
 
 <div class="card animate-fade">
@@ -27,8 +27,8 @@
                     {% endif %}
                 </td>
                 <td style="padding: 12px; text-align: right;">
-                    <a href="{% url 'dashboard:category_edit' cat.pk %}" style="color: var(--secondary); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Editar">✏️</a>
-                    <a href="{% url 'dashboard:category_delete' cat.pk %}" style="color: var(--accent); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Eliminar">🗑️</a>
+                    <a href="{% url 'dashboard:category_edit' business.slug cat.pk %}" style="color: var(--secondary); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Editar">✏️</a>
+                    <a href="{% url 'dashboard:category_delete' business.slug cat.pk %}" style="color: var(--accent); text-decoration: none; font-size: 1.1rem; margin-left: 10px;" title="Eliminar">🗑️</a>
                 </td>
             </tr>
             {% empty %}

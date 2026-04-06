@@ -14,7 +14,7 @@ class CategoryForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['category', 'name', 'description', 'price', 'image', 'is_available']
+        fields = ['category', 'name', 'description', 'price', 'is_available']
         labels = {
             'name': 'Nombre del plato',
             'category': 'Categoría',
@@ -27,7 +27,6 @@ class ProductForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ej. Ceviche Clásico'}),
             'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Descripción detallada'}),
             'price': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.10'}),
-            'image': forms.ClearableFileInput(attrs={'class': 'form-input'}),
         }
 
     def __init__(self, *args, **kwargs):

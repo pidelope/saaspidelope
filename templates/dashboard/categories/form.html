@@ -3,7 +3,7 @@
 {% block dash_content %}
 <div style="max-width: 500px;">
     <div style="margin-bottom: 30px;">
-        <a href="{% url 'dashboard:category_list' %}" style="text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">← Volver al listado</a>
+        <a href="{% url 'dashboard:category_list' business.slug %}" style="text-decoration: none; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">← Volver al listado</a>
         <h1>Añadir Categoría</h1>
         <p style="color: var(--text-muted);">Define un nombre y opcionalmente el orden de visualización.</p>
     </div>
@@ -26,7 +26,7 @@
 
             <div style="margin-top: 40px; display: flex; gap: 15px;">
                 <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar Categoría</button>
-                <a href="{% url 'dashboard:category_list' %}" class="btn btn-dark" style="flex: 1;">Descartar</a>
+                <a href="{% url 'dashboard:category_list' business.slug %}" class="btn btn-dark" style="flex: 1;">Descartar</a>
             </div>
         </form>
     </div>
