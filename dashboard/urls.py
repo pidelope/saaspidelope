@@ -32,6 +32,7 @@ urlpatterns = [
     # Tables & QR
     path('<slug:business_slug>/tables/', views.table_list, name='table_list'),
     path('<slug:business_slug>/tables/generate-qr/', views.generate_all_qr, name='generate_all_qr'),
+    path('<slug:business_slug>/tables/toggle-open/<int:pk>/', views.table_toggle_open, name='table_toggle_open'),
 
     # Waiter Monitor
     path('<slug:business_slug>/monitor/', views.waiter_dashboard, name='waiter_dashboard'),

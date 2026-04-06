@@ -231,6 +231,23 @@ def generate_all_qr(request, business_slug):
     business = get_business(request.user, business_slug)
     return render(request, 'dashboard/tables/qr_printable.html', {'business': business})
 
+@admin_required
+def table_toggle_open(request, business_slug, pk):
+    business = get_business(request.user, business_slug)
+    table = get_object_or_404(Table, pk=pk, business=business)
+    table.is_open = not table.is_open
+    table.save()
+    
+    label = "🔓 Abierta" if table.is_open else "🔒 Cerrada"
+    color = "#2e7d32" if table.is_open else "#c62828"
+    
+    html = f'''
+    <span style="color: {color}; font-weight: 700; font-size: 0.8rem; cursor: pointer;" 
+          hx-post="/dashboard/{business_slug}/tables/toggle-open/{pk}/" 
+          hx-target="#table-status-{pk}" hx-swap="innerHTML">{label}</span>
+    '''
+    return HttpResponse(html)
+
 # --- Waiter / Order Monitor ---
 @login_required
 def waiter_dashboard(request, business_slug):
@@ -259,6 +276,11 @@ def update_order_status(request, business_slug, order_code, new_status):
     if new_status in [s[0] for s in Order.STATUS_CHOICES]:
         order.status = new_status
         order.save()
+        
+        # If order is PAID, close the table automatically
+        if new_status == 'PAID' and order.table:
+            order.table.is_open = False
+            order.table.save()
     
     # Redirect to where the request came from
     referer = request.META.get('HTTP_REFERER')

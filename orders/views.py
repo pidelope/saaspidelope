@@ -22,15 +22,24 @@ def submit_order(request):
             if table_id:
                 table = get_object_or_404(Table, id=table_id, business=business)
             
-            # Create Order
-            order = Order.objects.create(
-                business=business,
-                table=table,
-                customer_name=customer_name,
-                status='PENDING'
-            )
+            # Check for existing active order for this table
+            order = None
+            if table:
+                order = Order.objects.filter(
+                    business=business, 
+                    table=table, 
+                    status__in=['PENDING', 'CONFIRMED', 'READY']
+                ).first()
             
-            total = 0
+            if not order:
+                # Create a NEW Order if no active one exists
+                order = Order.objects.create(
+                    business=business,
+                    table=table,
+                    customer_name=customer_name,
+                    status='PENDING'
+                )
+            
             for item in cart_items:
                 product = get_object_or_404(Product, id=item['id'])
                 qty = item['qty']
@@ -42,10 +51,9 @@ def submit_order(request):
                     quantity=qty,
                     price_at_order=price
                 )
-                total += (price * qty)
             
-            order.total_amount = total
-            order.save()
+            # Recalculate total
+            order.calculate_total()
             
             return JsonResponse({
                 'status': 'success',

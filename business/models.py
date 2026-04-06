@@ -33,7 +33,8 @@ class Business(models.Model):
 class Table(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='tables')
     number = models.CharField(max_length=10) # Can be '1', '2' or 'VIP-1'
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True) # If delete/disable
+    is_open = models.BooleanField(default=False) # If ready for orders
 
     def __str__(self):
         return f"{self.business.name} - Mesa {self.number}"

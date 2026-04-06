@@ -128,20 +128,33 @@
         }
     }
 }">
-    <!-- Success Screen -->
+    <!-- Success Screen (Order Sent) -->
     <template x-if="orderSent">
         <div class="success-screen animate-fade">
-            <div style="font-size: 5rem;">✅</div>
+            <div style="font-size: 5rem;">🚀</div>
             <h2 style="font-weight: 800; font-size: 2rem;">¡Pedido enviado!</h2>
-            <p style="color: #666;">Por favor muestra este código al mesero si es necesario:</p>
-            <div class="order-code" x-text="orderCode"></div>
-            <p>Estamos preparando lo mejor para ti.</p>
-            <button class="btn btn-primary" @click="orderSent = false" style="margin-top: 20px;">Seguir pidiendo</button>
+            <p style="color: #666;">Tu pedido ha sido enviado a cocina satisfactoriamente.</p>
+            <div class="card" style="max-width: 300px; margin: 20px auto; padding: 20px;">
+                <p style="font-weight: 800; color: var(--secondary);">Total Acumulado:</p>
+                <div style="font-size: 2.5rem; font-weight: 900;">S/ <span x-text="total"></span></div>
+                <div style="font-size: 0.8rem; margin-top: 10px; opacity: 0.8;">Mesa {{ table.number }}</div>
+            </div>
+            <button class="btn btn-primary" @click="orderSent = false" style="margin-top: 20px;">Seguir agregando platos</button>
         </div>
     </template>
 
+    <!-- Table Locked Screen -->
+    {% if table and not table.is_open and not active_order %}
+    <div class="success-screen">
+        <div style="font-size: 5rem;">🔏</div>
+        <h2 style="font-weight: 800;">Mesa Cerrada</h2>
+        <p style="color: var(--text-muted);">Por favor, solicita al personal que abra la mesa para comenzar tu pedido.</p>
+        <button class="btn btn-dark" onclick="location.reload()" style="margin-top: 20px;">🔄 Reintentar / Refrescar</button>
+    </div>
+    {% endif %}
+
     <!-- Menu Display -->
-    <div x-show="!orderSent">
+    <div x-show="!orderSent {% if table and not table.is_open and not active_order %}&& false{% endif %}">
         <header class="menu-header">
             {% if business.logo %}
             <img src="{{ business.logo.url }}" alt="Logo" class="business-logo">
@@ -151,11 +164,22 @@
                 <p>{{ business.slogan }}</p>
                 <p>📍 {{ business.address }}</p>
                 {% if table %}
-                    <p>🪑 Mesa #{{ table.number }}</p>
+                    <p>🪑 Mesa #{{ table.number }} 
+                        {% if table.is_open %}<span style="color: #2e7d32; font-weight: 800;">● Abierta</span>
+                        {% else %}<span style="color: #c62828; font-weight: 800;">○ Cerrada</span>{% endif %}
+                    </p>
                 {% else %}
                     <p>🥡 Para Llevar / Takeaway</p>
                 {% endif %}
             </div>
+            
+            {% if active_order %}
+            <div class="card animate-fade" style="margin-top: 20px; background: var(--secondary); color: white; padding: 15px; border: none;">
+                <p style="margin: 0; font-size: 0.8rem; font-weight: 700; opacity: 0.9;">CUENTA ACTUAL (PEDIDO #{{ active_order.code }})</p>
+                <div style="font-size: 1.5rem; font-weight: 900;">S/ {{ active_order.total_amount }}</div>
+                <div style="font-size: 0.75rem; margin-top: 5px;">Paga en caja al finalizar tu visita.</div>
+            </div>
+            {% endif %}
         </header>
 
         <div class="category-nav">
@@ -218,10 +242,21 @@
                 </template>
             </div>
             
-            <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 1.2rem; margin-bottom: 20px; border-top: 2px solid #eee; padding-top: 15px;">
-                <span>Total:</span>
+            <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 1.2rem; margin-bottom: 10px; border-top: 2px solid #eee; padding-top: 15px;">
+                <span>Total Nuevo:</span>
                 <span>S/ <span x-text="total"></span></span>
             </div>
+
+            {% if active_order %}
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1rem; color: var(--text-muted); margin-bottom: 20px;">
+                <span>Cuenta Anterior:</span>
+                <span>S/ {{ active_order.total_amount }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 1.4rem; color: var(--secondary); margin-bottom: 20px; padding: 10px; background: #fffde7; border-radius: 8px;">
+                <span>TOTAL A PAGAR:</span>
+                <span>S/ <span x-text="(parseFloat(total) + {{ active_order.total_amount }}).toFixed(2)"></span></span>
+            </div>
+            {% endif %}
 
             <button class="btn btn-primary" style="width: 100%; padding: 15px;" @click="submitOrder" :disabled="loading">
                 <span x-show="!loading">🚀 Enviar a Cocina</span>

@@ -17,6 +17,7 @@
                 <tr style="text-align: left; border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 0.85rem;">
                     <th style="padding: 12px;">Identificación Mesa</th>
                     <th style="padding: 12px;">Estado</th>
+                    <th style="padding: 12px;">Pedido (Abrir/Cerrar)</th>
                     <th style="padding: 12px; text-align: right;">Acciones</th>
                 </tr>
             </thead>
@@ -29,6 +30,17 @@
                             <span style="color: #2e7d32; font-weight: 700; font-size: 0.8rem;">✅ Habilitada</span>
                         {% else %}
                             <span style="color: #c62828; font-weight: 700; font-size: 0.8rem;">❌ Inactiva</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;" id="table-status-{{ mesa.pk }}">
+                        {% if mesa.is_open %}
+                            <span style="color: #2e7d32; font-weight: 700; font-size: 0.8rem; cursor: pointer;" 
+                                  hx-post="{% url 'dashboard:table_toggle_open' business.slug mesa.pk %}" 
+                                  hx-target="#table-status-{{ mesa.pk }}" hx-swap="innerHTML">🔓 Abierta</span>
+                        {% else %}
+                            <span style="color: #c62828; font-weight: 700; font-size: 0.8rem; cursor: pointer;" 
+                                  hx-post="{% url 'dashboard:table_toggle_open' business.slug mesa.pk %}" 
+                                  hx-target="#table-status-{{ mesa.pk }}" hx-swap="innerHTML">🔒 Cerrada</span>
                         {% endif %}
                     </td>
                     <td style="padding: 12px; text-align: right;">

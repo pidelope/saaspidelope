@@ -11,6 +11,16 @@ def public_menu(request, business_slug, table_number):
     else:
         table = get_object_or_404(Table, business=business, number=table_number)
     
+    # Get any active order for this table to show current bill
+    active_order = None
+    if table:
+        from orders.models import Order
+        active_order = Order.objects.filter(
+            business=business, 
+            table=table, 
+            status__in=['PENDING', 'CONFIRMED', 'READY']
+        ).first()
+    
     # Get categories and products
     categories = Category.objects.filter(business=business).prefetch_related('products')
     
@@ -18,5 +28,6 @@ def public_menu(request, business_slug, table_number):
         'business': business,
         'table': table,
         'categories': categories,
+        'active_order': active_order,
     }
     return render(request, 'business/public_menu.html', context)
