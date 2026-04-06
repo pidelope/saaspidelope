@@ -248,6 +248,13 @@ def table_toggle_open(request, business_slug, pk):
     '''
     return HttpResponse(html)
 
+@admin_required
+def table_bulk_action(request, business_slug, action):
+    business = get_business(request.user, business_slug)
+    new_state = True if action == 'open' else False
+    business.tables.filter(is_active=True).update(is_open=new_state)
+    return redirect('dashboard:waiter_dashboard', business_slug=business.slug)
+
 # --- Waiter / Order Monitor ---
 @login_required
 def waiter_dashboard(request, business_slug):
@@ -257,10 +264,12 @@ def waiter_dashboard(request, business_slug):
         return HttpResponse("Acceso denegado.", status=403)
     
     orders = business.orders.exclude(status__in=['PAID', 'CANCELLED']).order_by('-created_at')
+    tables = business.tables.filter(is_active=True).order_by('number')
     
     return render(request, 'dashboard/waiter/monitor.html', {
         'business': business,
         'orders': orders,
+        'tables': tables,
         # Group by column
         'pending': orders.filter(status='PENDING'),
         'confirmed': orders.filter(status='CONFIRMED'),

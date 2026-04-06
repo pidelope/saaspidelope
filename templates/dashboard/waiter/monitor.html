@@ -1,101 +1,124 @@
 {% extends 'dashboard/base_dash.html' %}
 
 {% block dash_content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <div>
-        <h1>🧑‍🍳 Monitor de Pedidos</h1>
-        <p style="color: var(--text-muted);">Gestiona los pedidos de <strong>{{ business.name }}</strong> en tiempo real.</p>
+        <h1 style="margin: 0;">🧑‍🍳 Monitor de Pedidos</h1>
+        <p style="color: var(--text-muted); margin: 0;">Gestiona los pedidos de <strong>{{ business.name }}</strong> en tiempo real.</p>
     </div>
-    <div style="display: flex; gap: 15px;">
-        <div class="status-badge" style="background: #e3f2fd; color: #1976d2;">📡 Actualizando cada 5s</div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{% url 'dashboard:table_bulk_action' business.slug 'open' %}" class="btn btn-primary" style="font-size: 0.8rem;">🔓 Iniciar Recepción (Abrir todas)</a>
+        <a href="{% url 'dashboard:table_bulk_action' business.slug 'close' %}" class="btn btn-dark" style="font-size: 0.8rem;">🔒 Cerrar Todas</a>
+    <!-- Main Refreshing Container -->
+<div id="monitor-container" hx-get="{% url 'dashboard:waiter_dashboard' business.slug %}" hx-trigger="every 5s" hx-select="#monitor-container" hx-swap="outerHTML">
+    <!-- Table Status Center -->
+    <div class="card" style="margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #eee;">
+        <div style="display: flex; align-items: center; gap: 15px; overflow-x: auto; padding-bottom: 10px;">
+            <div style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; border-right: 2px solid #ddd; padding-right: 15px;">ESTADO MESAS:</div>
+            {% for mesa in tables %}
+            <div id="table-status-{{ mesa.pk }}" style="display: flex; align-items: center; gap: 5px; background: white; padding: 6px 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); min-width: fit-content; border: 1px solid {% if mesa.is_open %}#c8e6c9{% else %}#ffcdd2{% endif %};">
+                <span style="font-weight: 800; font-size: 0.9rem;">M{{ mesa.number }}</span>
+                {% if mesa.is_open %}
+                    <span style="color: #2e7d32; font-weight: 800; font-size: 0.75rem; cursor: pointer; border-left: 1px solid #eee; padding-left: 8px;" 
+                          hx-post="{% url 'dashboard:table_toggle_open' business.slug mesa.pk %}" 
+                          hx-target="#table-status-{{ mesa.pk }}" hx-swap="outerHTML">🔓 Abierta</span>
+                {% else %}
+                    <span style="color: #c62828; font-weight: 800; font-size: 0.75rem; cursor: pointer; border-left: 1px solid #eee; padding-left: 8px;" 
+                          hx-post="{% url 'dashboard:table_toggle_open' business.slug mesa.pk %}" 
+                          hx-target="#table-status-{{ mesa.pk }}" hx-swap="outerHTML">🔒 Cerrada</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="monitor-grid">
+        <!-- Columna: PENDIENTES -->
+        <div class="order-column">
+            <h3 class="column-header" style="border-color: #ff9800;">🆕 Pendientes ({{ pending.count }})</h3>
+            <div class="order-list">
+                {% for order in pending %}
+                <div class="order-card pending">
+                    <div class="order-header">
+                        <span class="order-code">#{{ order.code }}</span>
+                        <span class="order-time">{{ order.created_at|timesince }}</span>
+                    </div>
+                    <div class="order-target">
+                        {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
+                    </div>
+                    <div class="order-items">
+                        {% for item in order.items.all %}
+                            <div class="item-line">
+                                <span class="qty">{{ item.quantity }}x</span>
+                                <span class="name">{{ item.product.name }}</span>
+                            </div>
+                            {% if item.notes %}
+                                <div class="item-note">📝 {{ item.notes }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="order-actions">
+                        <a href="{% url 'dashboard:update_order_status' business.slug order.code 'CONFIRMED' %}" class="btn-action confirm">Confirmar</a>
+                    </div>
+                </div>
+                {% empty %}
+                    <p class="empty-msg">No hay pedidos nuevos.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Columna: EN COCINA / CONFIRMADOS -->
+        <div class="order-column">
+            <h3 class="column-header" style="border-color: #2196f3;">🔥 En Cocina ({{ confirmed.count }})</h3>
+            <div class="order-list">
+                {% for order in confirmed %}
+                <div class="order-card confirmed">
+                    <div class="order-header">
+                        <span class="order-code">#{{ order.code }}</span>
+                        <span class="order-time">{{ order.created_at|timesince }}</span>
+                    </div>
+                    <div class="order-target">
+                        {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
+                    </div>
+                    <div class="order-items">
+                        {% for item in order.items.all %}
+                            <div class="item-line">
+                                <span class="qty">{{ item.quantity }}x</span>
+                                <span class="name">{{ item.product.name }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="order-actions">
+                        <a href="{% url 'dashboard:update_order_status' business.slug order.code 'READY' %}" class="btn-action ready">¡Listo!</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Columna: LISTOS -->
+        <div class="order-column">
+            <h3 class="column-header" style="border-color: #4caf50;">✅ Listos ({{ ready.count }})</h3>
+            <div class="order-list">
+                {% for order in ready %}
+                <div class="order-card ready">
+                    <div class="order-header">
+                        <span class="order-code">#{{ order.code }}</span>
+                        <span class="order-time">{{ order.created_at|timesince }}</span>
+                    </div>
+                    <div class="order-target">
+                        {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
+                    </div>
+                    <div class="order-actions">
+                        <a href="{% url 'dashboard:update_order_status' business.slug order.code 'PAID' %}" class="btn-action paid" onclick="return confirm('¿El cliente ya pagó y se cerró la cuenta?')">Cerrar Cuenta</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
-
-<div class="monitor-grid" hx-get="{% url 'dashboard:waiter_dashboard' business.slug %}" hx-trigger="every 5s" hx-select=".monitor-grid" hx-swap="outerHTML">
-    
-    <!-- Columna: PENDIENTES -->
-    <div class="order-column">
-        <h3 class="column-header" style="border-color: #ff9800;">🆕 Pendientes ({{ pending.count }})</h3>
-        <div class="order-list">
-            {% for order in pending %}
-            <div class="order-card pending">
-                <div class="order-header">
-                    <span class="order-code">#{{ order.code }}</span>
-                    <span class="order-time">{{ order.created_at|timesince }}</span>
-                </div>
-                <div class="order-target">
-                    {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
-                </div>
-                <div class="order-items">
-                    {% for item in order.items.all %}
-                        <div class="item-line">
-                            <span class="qty">{{ item.quantity }}x</span>
-                            <span class="name">{{ item.product.name }}</span>
-                        </div>
-                        {% if item.notes %}
-                            <div class="item-note">📝 {{ item.notes }}</div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="order-actions">
-                    <a href="{% url 'dashboard:update_order_status' business.slug order.code 'CONFIRMED' %}" class="btn-action confirm">Confirmar</a>
-                </div>
-            </div>
-            {% empty %}
-                <p class="empty-msg">No hay pedidos nuevos.</p>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Columna: EN COCINA / CONFIRMADOS -->
-    <div class="order-column">
-        <h3 class="column-header" style="border-color: #2196f3;">🔥 En Cocina ({{ confirmed.count }})</h3>
-        <div class="order-list">
-            {% for order in confirmed %}
-            <div class="order-card confirmed">
-                <div class="order-header">
-                    <span class="order-code">#{{ order.code }}</span>
-                    <span class="order-time">{{ order.created_at|timesince }}</span>
-                </div>
-                <div class="order-target">
-                    {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
-                </div>
-                <div class="order-items">
-                    {% for item in order.items.all %}
-                        <div class="item-line">
-                            <span class="qty">{{ item.quantity }}x</span>
-                            <span class="name">{{ item.product.name }}</span>
-                        </div>
-                    {% endfor %}
-                </div>
-                <div class="order-actions">
-                    <a href="{% url 'dashboard:update_order_status' business.slug order.code 'READY' %}" class="btn-action ready">¡Listo!</a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Columna: LISTOS -->
-    <div class="order-column">
-        <h3 class="column-header" style="border-color: #4caf50;">✅ Listos ({{ ready.count }})</h3>
-        <div class="order-list">
-            {% for order in ready %}
-            <div class="order-card ready">
-                <div class="order-header">
-                    <span class="order-code">#{{ order.code }}</span>
-                    <span class="order-time">{{ order.created_at|timesince }}</span>
-                </div>
-                <div class="order-target">
-                    {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
-                </div>
-                <div class="order-actions">
-                    <a href="{% url 'dashboard:update_order_status' business.slug order.code 'PAID' %}" class="btn-action paid" onclick="return confirm('¿El cliente ya pagó y se cerró la cuenta?')">Cerrar Cuenta</a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+{% endblock %}
 
 </div>
 
