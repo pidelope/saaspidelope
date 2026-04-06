@@ -1,95 +1,140 @@
 {% extends 'dashboard/base_dash.html' %}
 
 {% block dash_content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-    <div>
-        <h1>💰 Dashboard de Caja</h1>
-        <p style="color: var(--text-muted);">Gestiona pagos y el cierre diario de <strong>{{ business.name }}</strong>.</p>
+<div class="caja-wrapper animate-fade">
+    <div class="dash-header">
+        <div>
+            <h1 class="page-title">💰 Centro de Cobro</h1>
+            <p class="text-muted">Gestiona el flujo de caja en tiempo real.</p>
+        </div>
+        <div class="revenue-card">
+            <span class="label">Total Ventas Hoy</span>
+            <span class="value">S/ {{ total_revenue }}</span>
+        </div>
     </div>
-    <div class="revenue-card">
-        <span class="label">💰 Total Venta Hoy</span>
-        <span class="value">S/ {{ total_revenue }}</span>
-    </div>
-</div>
 
-<div class="caja-grid">
-    
-    <!-- POR COBRAR -->
-    <div class="caja-panel">
-        <h3 class="panel-title" style="color: #ff9800;">🛎️ Por Cobrar (Pendiente Pago)</h3>
-        <div class="card-list">
-            {% for order in to_pay %}
-            <div class="order-bill">
-                <div class="bill-header">
-                    <strong>#{{ order.code }}</strong>
-                    <span>{{ order.created_at|date:"H:i" }}</span>
+    <div class="caja-layout">
+        <!-- SECCIÓN: CUENTAS POR COBRAR -->
+        <section class="caja-section">
+            <div class="section-title warning">
+                <span class="icon">🛎️</span> Pendientes de Pago ({{ to_pay.count }})
+            </div>
+            <div class="card-list">
+                {% for order in to_pay %}
+                <div class="bill-card-premium">
+                    <div class="bill-meta">
+                        <span class="code">#{{ order.code }}</span>
+                        <span class="account-id">ID: {{ order.client_id|truncatechars:8 }}</span>
+                        <span class="time">{{ order.created_at|date:"H:i" }}</span>
+                    </div>
+                    <div class="bill-content">
+                        <h2 class="target">{% if order.table %}🪑 Mesa {{ order.table.number }}{% else %}🥡 {{ order.customer_name }}{% endif %}</h2>
+                        <div class="amount">S/ {{ order.total_amount }}</div>
+                    </div>
+                    <div class="bill-actions">
+                        <a href="{% url 'dashboard:update_order_status' business.slug order.code 'PAID' %}" 
+                           class="btn btn-primary btn-block" 
+                           onclick="return confirm('¿Confirmas el pago de S/ {{ order.total_amount }}?')">
+                           💸 Confirmar Pago
+                        </a>
+                    </div>
                 </div>
-                <div class="bill-target">
-                    {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 {{ order.customer_name }} {% endif %}
-                </div>
-                <div class="bill-total">S/ {{ order.total_amount }}</div>
-                <div class="bill-actions">
-                    <a href="{% url 'dashboard:update_order_status' business.slug order.code 'PAID' %}" class="btn-pay" onclick="return confirm('¿Confirmas el pago de {{ order.total_amount }}?')">Confirmar Pago</a>
+                {% empty %}
+                <div class="empty-notif">No hay cuentas pendientes por cobrar.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- SECCIÓN: HISTORIAL DEL DÍA -->
+        <section class="caja-section">
+            <div class="section-title success">
+                <span class="icon">📅</span> Ventas Realizadas ({{ paid_today.count }})
+            </div>
+            <div class="card">
+                <div class="table-container">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Mesa / Cliente</th>
+                                <th>Hora Pago</th>
+                                <th class="text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in paid_today %}
+                            <tr>
+                                <td><span class="code-badge">#{{ order.code }}</span></td>
+                                <td>{% if order.table %}<strong>Mesa {{ order.table.number }}</strong>{% else %}{{ order.customer_name }}{% endif %}</td>
+                                <td>{{ order.updated_at|date:"H:i" }}</td>
+                                <td class="text-right font-bold">S/ {{ order.total_amount }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="empty-row">Aún no se han registrado cierres hoy.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="3">RESULTADO TOTAL DEL DÍA</td>
+                                <td class="text-right">S/ {{ total_revenue }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             </div>
-            {% empty %}
-                <p class="empty">No hay cuentas pendientes.</p>
-            {% endfor %}
-        </div>
+        </section>
     </div>
-
-    <!-- CIERRE DEL DÍA (VENTAS TOTALES) -->
-    <div class="caja-panel">
-        <h3 class="panel-title" style="color: #4caf50;">📅 Cierre de Caja (Ventas Realizadas)</h3>
-        <div class="card">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Destino</th>
-                        <th>Hora Pago</th>
-                        <th>Monto</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in paid_today %}
-                    <tr>
-                        <td><strong>#{{ order.code }}</strong></td>
-                        <td>{% if order.table %} Mesa {{ order.table.number }} {% else %} {{ order.customer_name }} {% endif %}</td>
-                        <td>{{ order.updated_at|date:"H:i" }}</td>
-                        <td>S/ {{ order.total_amount }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: #999;">Aún no hay ventas cerradas hoy.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr style="background: #fbf00810; font-weight: 800; font-size: 1.1rem;">
-                        <td colspan="3">TOTAL CIERRE</td>
-                        <td>S/ {{ total_revenue }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-
 </div>
 
 <style>
-    .revenue-card { background: #1a1a1a; color: white; padding: 15px 25px; border-radius: 15px; text-align: right; display: flex; flex-direction: column; }
-    .revenue-card .label { font-size: 0.75rem; text-transform: uppercase; color: #fbf008; font-weight: 800; }
-    .revenue-card .value { font-size: 1.8rem; font-weight: 900; line-height: 1; margin-top: 5px; }
+    /* Caja Layout */
+    .caja-wrapper { padding-top: 10px; }
+    .caja-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 40px; align-items: start; }
+    
+    /* Header Revenue */
+    .revenue-card { background: var(--secondary); color: white; padding: 20px 30px; border-radius: 20px; text-align: right; box-shadow: var(--shadow-lg); }
+    .revenue-card .label { font-size: 0.75rem; text-transform: uppercase; color: var(--primary); font-weight: 800; letter-spacing: 1px; }
+    .revenue-card .value { font-size: 2.2rem; font-weight: 900; color: white; line-height: 1; margin-top: 5px; }
 
-    .caja-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
-    .panel-title { font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    /* Section Styling */
+    .section-title { font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 2px solid #eee; display: flex; align-items: center; gap: 10px; }
+    .section-title.warning { color: #d97706; border-color: #fef3c7; }
+    .section-title.success { color: #059669; border-color: #d1fae5; }
 
-    .order-bill { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #eee; border-left: 6px solid #ffbc00; }
-    .bill-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; }
-    .bill-target { font-size: 1.2rem; font-weight: 800; margin: 10px 0; }
-    .bill-total { font-size: 1.4rem; font-weight: 900; color: #1a1a1a; margin-bottom: 15px; }
-    .btn-pay { background: #1a1a1a; color: #fbf008; width: 100%; border-radius: 8px; border: none; padding: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.2s; display: block; text-decoration: none; text-align: center; }
-    .btn-pay:hover { filter: brightness(1.2); transform: scale(1.02); }
+    /* Bill Cards */
+    .bill-card-premium { background: white; border-radius: 18px; padding: 25px; border: 1px solid var(--border); border-left: 8px solid var(--primary); margin-bottom: 20px; box-shadow: var(--shadow); transition: 0.2s; }
+    .bill-card-premium:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+    .bill-meta { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); font-weight: 700; margin-bottom: 15px; }
+    .bill-meta .code { background: #f3f4f6; padding: 2px 8px; border-radius: 6px; color: var(--secondary); }
+    
+    .target { font-size: 1.6rem; font-weight: 950; margin: 0; color: var(--secondary); letter-spacing: -0.5px; }
+    .amount { font-size: 2rem; font-weight: 900; color: var(--secondary); margin: 10px 0 20px; }
+    
+    .btn-block { width: 100%; font-size: 1rem; padding: 15px; }
+
+    /* Premium Table */
+    .table-container { overflow-x: auto; }
+    .premium-table { width: 100%; border-collapse: collapse; }
+    .premium-table th { text-align: left; padding: 15px; border-bottom: 2px solid var(--border); font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); }
+    .premium-table td { padding: 18px 15px; border-bottom: 1px solid #f3f4f6; font-size: 0.95rem; }
+    .premium-table .code-badge { background: #f3f4f6; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; }
+    .premium-table .text-right { text-align: right; }
+    .premium-table .font-bold { font-weight: 800; }
+    
+    .total-row { background: #fbf00810; font-weight: 900; font-size: 1.1rem; color: var(--secondary); }
+    .empty-row { text-align: center; color: var(--text-muted); padding: 50px 0; font-style: italic; }
+
+    .empty-notif { background: #f9fafb; border: 2px dashed #ddd; border-radius: 12px; padding: 30px; text-align: center; color: var(--text-muted); font-style: italic; }
+
+    /* Mobile Adaptivity */
+    @media (max-width: 900px) {
+        .caja-layout { grid-template-columns: 1fr; gap: 50px; }
+        .page-title { font-size: 1.6rem; }
+        .revenue-card .value { font-size: 1.8rem; }
+        .target { font-size: 1.4rem; }
+        .amount { font-size: 1.6rem; }
+    }
 </style>
 {% endblock %}

@@ -30,11 +30,19 @@ class Business(models.Model):
     def __str__(self):
         return self.name
 
+import uuid
+
 class Table(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='tables')
     number = models.CharField(max_length=10) # Can be '1', '2' or 'VIP-1'
     is_active = models.BooleanField(default=True) # If delete/disable
     is_open = models.BooleanField(default=False) # If ready for orders
+    session_token = models.UUIDField(default=uuid.uuid4, null=True, blank=True)
+
+    def rotate_session(self):
+        """Generates a new token to invalidate previous customers"""
+        self.session_token = uuid.uuid4()
+        self.save()
 
     def __str__(self):
         return f"{self.business.name} - Mesa {self.number}"

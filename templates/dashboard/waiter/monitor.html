@@ -1,216 +1,213 @@
 {% extends 'dashboard/base_dash.html' %}
 
 {% block dash_content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <div>
-        <h1 style="margin: 0;">🧑‍🍳 Monitor de Pedidos</h1>
-        <p style="color: var(--text-muted); margin: 0;">Gestiona los pedidos de <strong>{{ business.name }}</strong> en tiempo real.</p>
+<div class="monitor-wrapper animate-fade">
+    <div class="dash-header">
+        <div>
+            <h1 class="page-title">🧑‍🍳 Monitor de Pedidos</h1>
+            <p class="text-muted">Gestión de cocina en tiempo real.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'dashboard:table_bulk_action' business.slug 'open' %}" class="btn btn-primary btn-sm">🔓 Abrir Todas</a>
+            <a href="{% url 'dashboard:table_bulk_action' business.slug 'close' %}" class="btn btn-dark btn-sm">🔒 Cerrar Todas</a>
+        </div>
     </div>
-    <div style="display: flex; gap: 10px;">
-        <a href="{% url 'dashboard:table_bulk_action' business.slug 'open' %}" class="btn btn-primary" style="font-size: 0.8rem;">🔓 Iniciar Recepción (Abrir todas)</a>
-        <a href="{% url 'dashboard:table_bulk_action' business.slug 'close' %}" class="btn btn-dark" style="font-size: 0.8rem;">🔒 Cerrar Todas</a>
-    <!-- Main Refreshing Container -->
-<div id="monitor-container" hx-get="{% url 'dashboard:waiter_dashboard' business.slug %}" hx-trigger="every 5s" hx-select="#monitor-container" hx-swap="outerHTML">
-    <!-- Table Status Center -->
-    <div class="card" style="margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #eee;">
-        <div style="display: flex; align-items: center; gap: 15px; overflow-x: auto; padding-bottom: 10px;">
-            <div style="font-weight: 800; font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; border-right: 2px solid #ddd; padding-right: 15px;">ESTADO MESAS:</div>
+
+    <!-- Main Container - WebSocket Driven -->
+    <div id="monitor-container" hx-get="{% url 'dashboard:waiter_dashboard' business.slug %}" hx-trigger="refresh, load" hx-select="#monitor-container" hx-swap="outerHTML">
+        
+        <!-- Quick Table Status Center -->
+        <div class="tables-status-bar">
             {% for mesa in tables %}
-            <div id="table-status-{{ mesa.pk }}" style="display: flex; align-items: center; gap: 5px; background: white; padding: 6px 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); min-width: fit-content; border: 1px solid {% if mesa.is_open %}#c8e6c9{% else %}#ffcdd2{% endif %};">
-                <span style="font-weight: 800; font-size: 0.9rem;">M{{ mesa.number }}</span>
-                {% if mesa.is_open %}
-                    <span style="color: #2e7d32; font-weight: 800; font-size: 0.75rem; cursor: pointer; border-left: 1px solid #eee; padding-left: 8px;" 
-                          hx-post="{% url 'dashboard:table_toggle_open' business.slug mesa.pk %}" 
-                          hx-target="#table-status-{{ mesa.pk }}" hx-swap="outerHTML">🔓 Abierta</span>
-                {% else %}
-                    <span style="color: #c62828; font-weight: 800; font-size: 0.75rem; cursor: pointer; border-left: 1px solid #eee; padding-left: 8px;" 
-                          hx-post="{% url 'dashboard:table_toggle_open' business.slug mesa.pk %}" 
-                          hx-target="#table-status-{{ mesa.pk }}" hx-swap="outerHTML">🔒 Cerrada</span>
-                {% endif %}
+            <div class="table-chip {% if mesa.is_open %}open{% else %}closed{% endif %}" 
+                 hx-post="{% url 'dashboard:table_toggle_open' business.slug mesa.pk %}" 
+                 hx-target="#monitor-container" hx-swap="outerHTML">
+                <span class="m-num">M{{ mesa.number }}</span>
+                <span class="m-status">{% if mesa.is_open %}🔓{% else %}🔒{% endif %}</span>
             </div>
             {% endfor %}
         </div>
+
+        <div class="monitor-grid">
+            <!-- Column: PENDIENTE -->
+            <div class="monitor-col">
+                <div class="col-header pending">
+                    <span class="dot"></span> 🆕 Pendientes ({{ pending.count }})
+                </div>
+                <div class="order-scroll">
+                    {% for order in pending %}
+                    <div class="order-card-premium pending {% if order.is_additional %}is-additional-border{% endif %}">
+                        <div class="card-head">
+                            <span class="code">#{{ order.code }}</span>
+                            {% if order.is_additional %}<span class="badge-add">➕ ADICIONAL</span>{% endif %}
+                            <span class="time">{{ order.created_at|timesince }}</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="target">{% if order.table %}🪑 Mesa {{ order.table.number }}{% else %}🥡 {{ order.customer_name }}{% endif %}</p>
+                            {% if order.has_quick_service %}<div class="quick-notice">⚡ SERVICIO RÁPIDO</div>{% endif %}
+                            <ul class="item-list">
+                                {% for item in order.items.all %}
+                                <li class="{% if item.product.category.is_quick_service %}quick-item{% endif %}">
+                                    <strong>{{ item.quantity }}x</strong> {{ item.product.name }}
+                                    {% if item.product.category.is_quick_service %}<span class="bolt">⚡</span>{% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="card-foot">
+                            <a href="{% url 'dashboard:update_order_status' business.slug order.code 'CONFIRMED' %}" class="btn-action confirm">Confirmar</a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="empty-state">No hay pedidos pendientes.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Column: EN PREPARACIÓN -->
+            <div class="monitor-col">
+                <div class="col-header confirmed">
+                    <span class="dot"></span> 🔥 Preparando ({{ confirmed.count }})
+                </div>
+                <div class="order-scroll">
+                    {% for order in confirmed %}
+                    <div class="order-card-premium confirmed {% if order.is_additional %}is-additional-border{% endif %}">
+                        <div class="card-head">
+                            <span class="code">#{{ order.code }}</span>
+                            {% if order.is_additional %}<span class="badge-add">➕ ADICIONAL</span>{% endif %}
+                            <span class="time">{{ order.created_at|timesince }}</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="target">{% if order.table %}🪑 Mesa {{ order.table.number }}{% else %}🥡 {{ order.customer_name }}{% endif %}</p>
+                            <ul class="item-list">
+                                {% for item in order.items.all %}
+                                <li class="{% if item.product.category.is_quick_service %}quick-item{% endif %}">
+                                    <strong>{{ item.quantity }}x</strong> {{ item.product.name }}
+                                    {% if item.product.category.is_quick_service %}<span class="bolt">⚡</span>{% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="card-foot">
+                            <a href="{% url 'dashboard:update_order_status' business.slug order.code 'READY' %}" class="btn-action ready">¡Listo!</a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="empty-state">Nada en el fuego.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Column: LISTO / POR PAGAR -->
+            <div class="monitor-col">
+                <div class="col-header ready">
+                    <span class="dot"></span> ✅ Listos ({{ ready.count }})
+                </div>
+                <div class="order-scroll">
+                    {% for order in ready %}
+                    <div class="order-card-premium ready">
+                        <div class="card-head">
+                            <span class="code">#{{ order.code }}</span>
+                            <span class="total">S/ {{ order.total_amount }}</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="target">{% if order.table %}🪑 Mesa {{ order.table.number }}{% else %}🥡 {{ order.customer_name }}{% endif %}</p>
+                            <p style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);">
+                                ID Comensal: <span style="color: var(--secondary)">{{ order.client_id|truncatechars:8 }}</span>
+                            </p>
+                        </div>
+                        <div class="card-foot">
+                            <a href="{% url 'dashboard:update_order_status' business.slug order.code 'PAID' %}" class="btn-action paid" onclick="return confirm('¿Confirmas pago individual y liberación de esta cuenta?')">Cerrar Cuenta</a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="empty-state">No hay platos por entregar.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="monitor-grid">
-        <!-- Columna: PENDIENTES -->
-        <div class="order-column">
-            <h3 class="column-header" style="border-color: #ff9800;">🆕 Pendientes ({{ pending.count }})</h3>
-            <div class="order-list">
-                {% for order in pending %}
-                <div class="order-card pending">
-                    <div class="order-header">
-                        <span class="order-code">#{{ order.code }}</span>
-                        <span class="order-time">{{ order.created_at|timesince }}</span>
-                    </div>
-                    <div class="order-target">
-                        {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
-                    </div>
-                    <div class="order-items">
-                        {% for item in order.items.all %}
-                            <div class="item-line">
-                                <span class="qty">{{ item.quantity }}x</span>
-                                <span class="name">{{ item.product.name }}</span>
-                            </div>
-                            {% if item.notes %}
-                                <div class="item-note">📝 {{ item.notes }}</div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                    <div class="order-actions">
-                        <a href="{% url 'dashboard:update_order_status' business.slug order.code 'CONFIRMED' %}" class="btn-action confirm">Confirmar</a>
-                    </div>
-                </div>
-                {% empty %}
-                    <p class="empty-msg">No hay pedidos nuevos.</p>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Columna: EN COCINA / CONFIRMADOS -->
-        <div class="order-column">
-            <h3 class="column-header" style="border-color: #2196f3;">🔥 En Cocina ({{ confirmed.count }})</h3>
-            <div class="order-list">
-                {% for order in confirmed %}
-                <div class="order-card confirmed">
-                    <div class="order-header">
-                        <span class="order-code">#{{ order.code }}</span>
-                        <span class="order-time">{{ order.created_at|timesince }}</span>
-                    </div>
-                    <div class="order-target">
-                        {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
-                    </div>
-                    <div class="order-items">
-                        {% for item in order.items.all %}
-                            <div class="item-line">
-                                <span class="qty">{{ item.quantity }}x</span>
-                                <span class="name">{{ item.product.name }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <div class="order-actions">
-                        <a href="{% url 'dashboard:update_order_status' business.slug order.code 'READY' %}" class="btn-action ready">¡Listo!</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Columna: LISTOS -->
-        <div class="order-column">
-            <h3 class="column-header" style="border-color: #4caf50;">✅ Listos ({{ ready.count }})</h3>
-            <div class="order-list">
-                {% for order in ready %}
-                <div class="order-card ready">
-                    <div class="order-header">
-                        <span class="order-code">#{{ order.code }}</span>
-                        <span class="order-time">{{ order.created_at|timesince }}</span>
-                    </div>
-                    <div class="order-target">
-                        {% if order.table %} 🪑 Mesa {{ order.table.number }} {% else %} 🥡 Para: {{ order.customer_name }} {% endif %}
-                    </div>
-                    <div class="order-actions">
-                        <a href="{% url 'dashboard:update_order_status' business.slug order.code 'PAID' %}" class="btn-action paid" onclick="return confirm('¿El cliente ya pagó y se cerró la cuenta?')">Cerrar Cuenta</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
 </div>
 
 <style>
-    .monitor-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 25px;
-        align-items: flex-start;
+    /* Monitor Layout */
+    .monitor-wrapper { padding-top: 10px; }
+    .page-title { font-size: 2rem; }
+    .header-actions { display: flex; gap: 10px; }
+    .btn-sm { padding: 8px 16px; font-size: 0.8rem; }
+
+    /* Tables Bar */
+    .tables-status-bar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .table-chip { background: white; border: 1px solid var(--border); padding: 8px 14px; border-radius: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; min-width: fit-content; }
+    .table-chip.open { border-color: var(--accent); background: #f0fdf4; }
+    .table-chip.closed { border-color: #fca5a5; background: #fff1f2; }
+    .table-chip:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .table-chip .m-num { font-weight: 800; font-size: 0.9rem; }
+
+    /* Grid System */
+    .monitor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; align-items: start; }
+    .monitor-col { background: #f1f5f9; border-radius: 20px; padding: 15px; min-height: 500px; display: flex; flex-direction: column; }
+    
+    .col-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; background: white; border-radius: 10px; border-left: 5px solid gray; }
+    .col-header.pending { border-color: var(--warning); color: #92400e; }
+    .col-header.confirmed { border-color: var(--danger); color: #991b1b; }
+    .col-header.ready { border-color: var(--accent); color: #065f46; }
+    .col-header .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+
+    /* Premium Order Card */
+    .order-card-premium { background: white; border-radius: 15px; padding: 20px; border: 1px solid var(--border); margin-bottom: 15px; box-shadow: var(--shadow); transition: 0.2s; }
+    .order-card-premium:hover { transform: scale(1.02); box-shadow: var(--shadow-lg); }
+    .card-head { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.8rem; font-weight: 800; color: var(--text-muted); }
+    .card-head .code { color: var(--secondary); background: #eee; padding: 2px 6px; border-radius: 4px; }
+    
+    .card-body .target { font-size: 1.3rem; font-weight: 900; margin: 0 0 10px 0; color: var(--secondary); }
+    .item-list { list-style: none; padding: 0; margin: 0; }
+    .item-list li { font-size: 1rem; color: #444; border-bottom: 1px dashed #eee; padding: 6px 0; }
+
+    .card-foot { margin-top: 20px; }
+    .btn-action { display: block; text-align: center; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: 800; text-transform: uppercase; font-size: 0.85rem; }
+    .btn-action.confirm { background: #fff8e1; color: #92400e; }
+    .btn-action.ready { background: #fef2f2; color: #991b1b; }
+    .btn-action.paid { background: #f0fdf4; color: #166534; }
+
+    .empty-state { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 0.9rem; font-style: italic; }
+
+    /* New Smart Badges */
+    .badge-add { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; }
+    .is-additional-border { border-left: 8px solid #f97316 !important; }
+    
+    .quick-notice { background: #fefce8; color: #a16207; border: 1px solid #fef08a; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; margin-bottom: 10px; display: inline-block; animation: neon-glow 2s infinite; }
+    .quick-item { color: #a16207 !important; font-weight: 750; }
+    .bolt { margin-left: 5px; animation: bolt-pulse 1s infinite; display: inline-block; }
+
+    @keyframes neon-glow { 0% { box-shadow: 0 0 5px #fef08a; } 50% { box-shadow: 0 0 15px #fef08a; } 100% { box-shadow: 0 0 5px #fef08a; } }
+    @keyframes bolt-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    /* Mobile specific over-rides */
+    @media (max-width: 768px) {
+        .monitor-grid { grid-template-columns: 1fr; }
+        .monitor-col { min-height: auto; }
+        .page-title { font-size: 1.5rem; }
+        .header-actions .btn { font-size: 0.7rem; }
     }
-
-    .order-column {
-        background: rgba(255, 255, 255, 0.5);
-        border-radius: 12px;
-        padding: 15px;
-        min-height: 80vh;
-    }
-
-    .column-header {
-        font-size: 1rem;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 3px solid;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .order-card {
-        background: white;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        border-left: 5px solid transparent;
-        animation: slideIn 0.3s ease-out;
-    }
-
-    @keyframes slideIn {
-        from { transform: translateY(10px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-
-    .order-card.pending { border-left-color: #ff9800; }
-    .order-card.confirmed { border-left-color: #2196f3; }
-    .order-card.ready { border-left-color: #4caf50; }
-
-    .order-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-    }
-    .order-code { font-weight: 800; font-family: monospace; font-size: 1.1rem; }
-    .order-time { font-size: 0.75rem; color: #999; }
-
-    .order-target {
-        font-weight: 700;
-        font-size: 1rem;
-        margin-bottom: 12px;
-        color: #333;
-    }
-
-    .item-line {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 5px;
-        font-size: 0.95rem;
-    }
-    .qty { font-weight: 800; color: #666; }
-    .item-note { font-size: 0.8rem; font-style: italic; color: #ff5722; margin-bottom: 8px; margin-left: 25px; }
-
-    .order-actions {
-        margin-top: 15px;
-        display: flex;
-        gap: 10px;
-    }
-
-    .btn-action {
-        flex: 1;
-        text-align: center;
-        padding: 10px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 800;
-        font-size: 0.85rem;
-        transition: 0.2s;
-    }
-    .btn-action.confirm { background: #fff3e0; color: #e65100; }
-    .btn-action.ready { background: #e3f2fd; color: #1565c0; }
-    .btn-action.paid { background: #e8f5e9; color: #2e7d32; }
-
-    .btn-action:hover { filter: brightness(0.95); transform: scale(1.02); }
-
-    .empty-msg { text-align: center; color: #aaa; margin-top: 40px; font-style: italic; }
 </style>
+
+<script>
+    // WebSocket Real-time Integration
+    (function() {
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const socketUrl = `${protocol}://${window.location.host}/ws/orders/{{ business.slug }}/`;
+        let socket = new WebSocket(socketUrl);
+        socket.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.type === 'order_update') {
+                    htmx.trigger('#monitor-container', 'refresh');
+                }
+            } catch (err) {}
+        };
+        socket.onclose = function(e) { setTimeout(function() { window.location.reload(); }, 5000); };
+    })();
+</script>
 {% endblock %}

@@ -1,6 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from .forms import CategoryForm, ProductForm, StaffRegistrationForm
 from products.models import Category, Product
 from accounts.models import User
@@ -38,6 +40,19 @@ def admin_required(view_func):
             return HttpResponse("No tienes permisos.", status=403)
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+def notify_monitor(business_slug):
+    """Helper to signal the monitor via WebSockets"""
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"orders_{business_slug}",
+            {
+                "type": "order_update",
+            }
+        )
+    except Exception as e:
+        print(f"WS Notify Error: {e}")
 
 def get_business(user, slug):
     return get_object_or_404(Business, owner=user, slug=slug)
@@ -238,6 +253,8 @@ def table_toggle_open(request, business_slug, pk):
     table.is_open = not table.is_open
     table.save()
     
+    notify_monitor(business_slug)
+    
     label = "🔓 Abierta" if table.is_open else "🔒 Cerrada"
     color = "#2e7d32" if table.is_open else "#c62828"
     
@@ -253,27 +270,46 @@ def table_bulk_action(request, business_slug, action):
     business = get_business(request.user, business_slug)
     new_state = True if action == 'open' else False
     business.tables.filter(is_active=True).update(is_open=new_state)
+    notify_monitor(business_slug)
     return redirect('dashboard:waiter_dashboard', business_slug=business.slug)
 
 # --- Waiter / Order Monitor ---
 @login_required
 def waiter_dashboard(request, business_slug):
-    # This view is for WAITERS or ADMINS
     business = get_object_or_404(Business, slug=business_slug)
     if request.user.role not in ['ADMIN', 'WAITER']:
         return HttpResponse("Acceso denegado.", status=403)
     
-    orders = business.orders.exclude(status__in=['PAID', 'CANCELLED']).order_by('-created_at')
-    tables = business.tables.filter(is_active=True).order_by('number')
+    active_orders = business.orders.exclude(status__in=['PAID', 'CANCELLED']).order_by('-created_at')
     
+    # Pre-calculate 'is_additional' and session totals
+    session_first_orders = {} # key: (table_id, session_token) -> oldest_order_id
+    
+    for order in active_orders:
+        if order.table_id and order.session_token:
+            key = (order.table_id, order.session_token)
+            # Find the true first order of this visit
+            first = business.orders.filter(table_id=order.table_id, session_token=order.session_token).order_by('created_at').first()
+            if first:
+                session_first_orders[key] = first.id
+
+    for order in active_orders:
+        # If it's not the first order of the visit, it's an "Additional" order
+        key = (order.table_id, order.session_token)
+        order.is_additional = False
+        if key in session_first_orders:
+            if order.id != session_first_orders[key]:
+                order.is_additional = True
+        
+        # Check if ANY item in this order is quick service (for card badge)
+        order.has_quick_service = order.items.filter(product__category__is_quick_service=True).exists()
+
     return render(request, 'dashboard/waiter/monitor.html', {
         'business': business,
-        'orders': orders,
-        'tables': tables,
-        # Group by column
-        'pending': orders.filter(status='PENDING'),
-        'confirmed': orders.filter(status='CONFIRMED'),
-        'ready': orders.filter(status='READY'),
+        'active_orders': active_orders,
+        'pending': active_orders.filter(status='PENDING'),
+        'confirmed': active_orders.filter(status='CONFIRMED'),
+        'ready': active_orders.filter(status='READY'),
     })
 
 @login_required
@@ -286,10 +322,20 @@ def update_order_status(request, business_slug, order_code, new_status):
         order.status = new_status
         order.save()
         
-        # If order is PAID, close the table automatically
+        # SMART TABLE RESET: Only rotate if ALL sub-accounts for this table session are paid
         if new_status == 'PAID' and order.table:
-            order.table.is_open = False
-            order.table.save()
+            other_active_orders = Order.objects.filter(
+                table=order.table,
+                session_token=order.session_token
+            ).exclude(status__in=['PAID', 'CANCELLED']).exists()
+            
+            if not other_active_orders:
+                # Everyone paid! Rotate session for new guests
+                order.table.rotate_session()
+                order.table.is_open = True
+                order.table.save()
+        
+        notify_monitor(business.slug)
     
     # Redirect to where the request came from
     referer = request.META.get('HTTP_REFERER')

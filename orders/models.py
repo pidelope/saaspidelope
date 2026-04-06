@@ -21,6 +21,8 @@ class Order(models.Model):
     code = models.CharField(max_length=6, unique=True, default=generate_order_code)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    session_token = models.CharField(max_length=100, blank=True, null=True, help_text="Tokens de la mesa para agrupar tickets de una visita.")
+    client_id = models.CharField(max_length=100, blank=True, null=True, help_text="ID del dispositivo para cuentas separadas.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

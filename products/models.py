@@ -5,6 +5,7 @@ class Category(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='categories')
     name = models.CharField(max_length=50)
     description = models.TextField(blank=True, null=True)
+    is_quick_service = models.BooleanField(default=False, help_text="Marcar para bebidas/bar que el mozo puede servir rápido.")
 
     class Meta:
         verbose_name_plural = "Categories"

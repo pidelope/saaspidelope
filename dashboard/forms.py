@@ -5,7 +5,10 @@ from accounts.models import User
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
-        fields = ['name', 'description']
+        fields = ['name', 'description', 'is_quick_service']
+        labels = {
+            'is_quick_service': '⚡ Servicio Rápido (Bebidas, bar, etc.)',
+        }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ej. Ceviches, Bebidas...'}),
             'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 2, 'placeholder': 'Descripción opcional (Ej: Lo mejor del mar)'}),
