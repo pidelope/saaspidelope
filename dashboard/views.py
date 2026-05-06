@@ -280,18 +280,26 @@ def waiter_dashboard(request, business_slug):
     if request.user.role not in ['ADMIN', 'WAITER']:
         return HttpResponse("Acceso denegado.", status=403)
     
-    active_orders = business.orders.exclude(status__in=['PAID', 'CANCELLED']).order_by('-created_at')
+    # 1. OPTIMIZATION: Prefetch items, product and category to prevent N+1 database queries
+    active_orders = business.orders.exclude(
+        status__in=['PAID', 'CANCELLED']
+    ).prefetch_related('items__product__category').order_by('-created_at')
     
-    # Pre-calculate 'is_additional' and session totals
+    # 2. OPTIMIZATION: Batch query all table sessions in a single database trip to find earliest orders
     session_first_orders = {} # key: (table_id, session_token) -> oldest_order_id
+    active_sessions = set((o.table_id, o.session_token) for o in active_orders if o.table_id and o.session_token)
     
-    for order in active_orders:
-        if order.table_id and order.session_token:
-            key = (order.table_id, order.session_token)
-            # Find the true first order of this visit
-            first = business.orders.filter(table_id=order.table_id, session_token=order.session_token).order_by('created_at').first()
-            if first:
-                session_first_orders[key] = first.id
+    if active_sessions:
+        from django.db.models import Q
+        q_obj = Q()
+        for t_id, s_tok in active_sessions:
+            q_obj |= Q(table_id=t_id, session_token=s_tok)
+        
+        all_session_orders = business.orders.filter(q_obj).order_by('created_at')
+        for o in all_session_orders:
+            key = (o.table_id, o.session_token)
+            if key not in session_first_orders:
+                session_first_orders[key] = o.id
 
     for order in active_orders:
         # If it's not the first order of the visit, it's an "Additional" order
@@ -301,11 +309,12 @@ def waiter_dashboard(request, business_slug):
             if order.id != session_first_orders[key]:
                 order.is_additional = True
         
-        # Check if ANY item in this order is quick service (for card badge)
-        order.has_quick_service = order.items.filter(product__category__is_quick_service=True).exists()
+        # 3. OPTIMIZATION: Check quick service in-memory (0 queries!) instead of DB hit
+        order.has_quick_service = any(item.product.category.is_quick_service for item in order.items.all())
 
     return render(request, 'dashboard/waiter/monitor.html', {
         'business': business,
+        'tables': business.tables.filter(is_active=True), # Ensure active tables are loaded for status bar
         'active_orders': active_orders,
         'pending': active_orders.filter(status='PENDING'),
         'confirmed': active_orders.filter(status='CONFIRMED'),

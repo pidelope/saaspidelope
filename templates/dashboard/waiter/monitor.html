@@ -7,7 +7,22 @@
             <h1 class="page-title">🧑‍🍳 Monitor de Pedidos</h1>
             <p class="text-muted">Gestión de cocina en tiempo real.</p>
         </div>
-        <div class="header-actions">
+        <div class="header-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <!-- Selector de Frecuencia de Consulta -->
+            <div class="refresh-selector-container">
+                <label for="refresh-rate" class="refresh-label">🔄 Actualización:</label>
+                <select id="refresh-rate" class="form-select refresh-select">
+                    <option value="ws" selected>📡 WebSockets (Tiempo Real)</option>
+                    <option value="3000">⏱️ Consulta c/3 segundos</option>
+                    <option value="5000">⏱️ Consulta c/5 segundos</option>
+                    <option value="10000">⏱️ Consulta c/10 segundos</option>
+                    <option value="manual">🛑 Manual (Solo clic)</option>
+                </select>
+            </div>
+            
+            <button onclick="htmx.trigger('#monitor-container', 'refresh')" class="btn btn-dark btn-sm" style="display: flex; align-items: center; gap: 6px;">
+                🔄 Refrescar
+            </button>
             <a href="{% url 'dashboard:table_bulk_action' business.slug 'open' %}" class="btn btn-primary btn-sm">🔓 Abrir Todas</a>
             <a href="{% url 'dashboard:table_bulk_action' business.slug 'close' %}" class="btn btn-dark btn-sm">🔒 Cerrar Todas</a>
         </div>
@@ -133,8 +148,14 @@
     /* Monitor Layout */
     .monitor-wrapper { padding-top: 10px; }
     .page-title { font-size: 2rem; }
-    .header-actions { display: flex; gap: 10px; }
-    .btn-sm { padding: 8px 16px; font-size: 0.8rem; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-sm { padding: 8px 16px; font-size: 0.8rem; height: 38px; display: inline-flex; align-items: center; }
+    
+    /* Refresh Control */
+    .refresh-selector-container { display: inline-flex; align-items: center; gap: 8px; background: white; border: 1px solid #cbd5e1; padding: 4px 12px; border-radius: 10px; height: 38px; }
+    .refresh-label { font-size: 0.8rem; font-weight: 700; color: #475569; margin: 0; white-space: nowrap; }
+    .refresh-select { border: none; background: transparent; font-size: 0.8rem; font-weight: 800; color: #1e293b; cursor: pointer; outline: none; padding-right: 20px; }
+    .refresh-select:focus { outline: none; }
 
     /* Tables Bar */
     .tables-status-bar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
@@ -194,20 +215,117 @@
 </style>
 
 <script>
-    // WebSocket Real-time Integration
+    // Intelligent Live Refresh & Fallback Polling Control
     (function() {
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const socketUrl = `${protocol}://${window.location.host}/ws/orders/{{ business.slug }}/`;
-        let socket = new WebSocket(socketUrl);
-        socket.onmessage = function(e) {
-            try {
-                const data = JSON.parse(e.data);
-                if (data.type === 'order_update') {
-                    htmx.trigger('#monitor-container', 'refresh');
+        let socket = null;
+        let pollingInterval = null;
+        let reconnectTimeout = null;
+        const monitorContainer = '#monitor-container';
+        const refreshRateSelect = document.getElementById('refresh-rate');
+
+        function triggerRefresh() {
+            // Staggered refresh (Jitter) to protect the DB from simultaneous high-frequency hits
+            const jitter = Math.floor(Math.random() * 500);
+            setTimeout(() => {
+                if (typeof htmx !== 'undefined') {
+                    htmx.trigger(monitorContainer, 'refresh');
                 }
-            } catch (err) {}
-        };
-        socket.onclose = function(e) { setTimeout(function() { window.location.reload(); }, 5000); };
+            }, jitter);
+        }
+
+        function initWebSocket() {
+            if (socket) return; // Already connected
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const socketUrl = `${protocol}://${window.location.host}/ws/orders/{{ business.slug }}/`;
+            
+            console.log("🔌 Conectando monitor de pedidos vía WebSockets...");
+            socket = new WebSocket(socketUrl);
+            
+            socket.onopen = function() {
+                console.log("📡 Conexión WebSocket establecida con éxito.");
+                // Clear any reconnect delay if established
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                    reconnectTimeout = null;
+                }
+            };
+
+            socket.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'order_update') {
+                        console.log("🆕 Pedido recibido o actualizado, refrescando tablero...");
+                        triggerRefresh();
+                    }
+                } catch (err) {}
+            };
+
+            socket.onclose = function(e) {
+                socket = null;
+                // Auto-reconnect after 5 seconds if the user still has WebSockets selected
+                if (refreshRateSelect && refreshRateSelect.value === 'ws') {
+                    console.log("⚠️ Conexión WebSocket cerrada. Reintentando conectar en 5s...");
+                    reconnectTimeout = setTimeout(initWebSocket, 5000);
+                }
+            };
+            
+            socket.onerror = function(err) {
+                console.error("❌ Error en WebSocket del monitor:", err);
+            };
+        }
+
+        function closeWebSocket() {
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
+            }
+            if (socket) {
+                console.log("🔌 Desconectando canal de WebSockets de forma segura...");
+                socket.close();
+                socket = null;
+            }
+        }
+
+        function applyRefreshRate() {
+            const val = refreshRateSelect.value;
+            localStorage.setItem('pideya_monitor_refresh_rate', val);
+
+            // 1. Clear any running interval
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+
+            // 2. Manage Connection State
+            if (val === 'ws') {
+                initWebSocket();
+            } else {
+                closeWebSocket();
+                if (val !== 'manual') {
+                    const ms = parseInt(val, 10);
+                    console.log(`⏱️ Activando consulta periódica cada ${ms / 1000}s...`);
+                    pollingInterval = setInterval(triggerRefresh, ms);
+                } else {
+                    console.log("🛑 Actualización configurada en modo manual.");
+                }
+            }
+        }
+
+        // Initialize from localStorage preference or fall back to WebSockets
+        const storedRate = localStorage.getItem('pideya_monitor_refresh_rate') || 'ws';
+        if (refreshRateSelect) {
+            refreshRateSelect.value = storedRate;
+            refreshRateSelect.addEventListener('change', applyRefreshRate);
+        }
+        
+        // Run initial configuration
+        if (storedRate === 'ws') {
+            initWebSocket();
+        } else if (storedRate !== 'manual') {
+            const ms = parseInt(storedRate, 10);
+            pollingInterval = setInterval(triggerRefresh, ms);
+        }
     })();
 </script>
 {% endblock %}
