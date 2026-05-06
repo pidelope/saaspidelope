@@ -45,7 +45,19 @@ class OrderItem(models.Model):
 
     @property
     def subtotal(self):
-        return self.price_at_order * self.quantity
+        # Safely convert to Decimal to avoid SQLite float-to-decimal mismatch errors
+        from decimal import Decimal
+        options_total = sum(Decimal(str(opt.price_at_order)) for opt in self.selected_options.all())
+        return (Decimal(str(self.price_at_order)) + options_total) * self.quantity
 
     def __str__(self):
         return f"{self.quantity}x {self.product.name} ({self.order.code})"
+
+class OrderItemOption(models.Model):
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='selected_options')
+    option = models.ForeignKey('products.ProductOption', on_delete=models.SET_NULL, null=True, blank=True)
+    name = models.CharField(max_length=100) # Historic copy of name
+    price_at_order = models.DecimalField(max_digits=10, decimal_places=2) # Historic copy of option price modifier
+
+    def __str__(self):
+        return f"{self.name} (S/. {self.price_at_order})"

@@ -61,17 +61,34 @@ def submit_order(request):
                     status='PENDING'
                 )
             
+            from .models import OrderItemOption
+            from products.models import ProductOption
+
             for item in cart_items:
                 product = get_object_or_404(Product, id=item['id'])
                 qty = item['qty']
                 price = product.price
+                notes = item.get('notes', '') # Capture custom preparation notes
                 
-                OrderItem.objects.create(
+                order_item = OrderItem.objects.create(
                     order=order,
                     product=product,
                     quantity=qty,
-                    price_at_order=price
+                    price_at_order=price,
+                    notes=notes
                 )
+                
+                # Fetch and save options snapshot
+                option_ids = item.get('options', [])
+                if option_ids:
+                    selected_opts = ProductOption.objects.filter(id__in=option_ids)
+                    for opt in selected_opts:
+                        OrderItemOption.objects.create(
+                            order_item=order_item,
+                            option=opt,
+                            name=opt.name,
+                            price_at_order=opt.price_modifier
+                        )
             
             # Recalculate total
             order.calculate_total()

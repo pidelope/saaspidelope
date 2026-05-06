@@ -280,10 +280,10 @@ def waiter_dashboard(request, business_slug):
     if request.user.role not in ['ADMIN', 'WAITER']:
         return HttpResponse("Acceso denegado.", status=403)
     
-    # 1. OPTIMIZATION: Prefetch items, product and category to prevent N+1 database queries
+    # 1. OPTIMIZATION: Prefetch items, product, category and selected options to prevent N+1 database queries
     active_orders = business.orders.exclude(
         status__in=['PAID', 'CANCELLED']
-    ).prefetch_related('items__product__category').order_by('-created_at')
+    ).prefetch_related('items__product__category', 'items__selected_options').order_by('-created_at')
     
     # 2. OPTIMIZATION: Batch query all table sessions in a single database trip to find earliest orders
     session_first_orders = {} # key: (table_id, session_token) -> oldest_order_id
